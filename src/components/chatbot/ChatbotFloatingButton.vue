@@ -1,2 +1,51 @@
-<script setup>import{ref,nextTick}from'vue';const open=ref(false),text=ref(''),messages=ref(JSON.parse(localStorage.getItem('localhub_chat_history_v1')||'[]'));function send(q=text.value){if(!q.trim())return;messages.value.push({role:'user',text:q},{role:'bot',text:'체험 모드예요. 상단 지도와 카테고리에서 원하는 지역 정보를 찾아보세요!'});localStorage.setItem('localhub_chat_history_v1',JSON.stringify(messages.value));text.value='';nextTick(()=>{})}</script>
-<template><button v-if="!open" class="chat-fab" type="button" @click="open=true"><b>✦</b><span>서울 여행 도우미</span></button><section v-else class="chat-panel" aria-label="서울 여행 도우미"><header><div><small>LOCALHUB AI</small><b>서울 여행 도우미</b></div><button type="button" aria-label="닫기" @click="open=false">×</button></header><div class="messages"><div v-if="!messages.length" class="welcome"><b>어떤 서울을 찾고 있나요?</b><p>지역이나 관심사를 말씀해주세요.</p></div><p v-for="(m,i) in messages" :key="i" :class="m.role">{{m.text}}</p></div><div class="suggest"><button v-for="q in ['한강 근처 관광지','비 오는 날 문화시설']" :key="q" type="button" @click="send(q)">{{q}}</button></div><form @submit.prevent="send()"><input v-model="text" placeholder="질문을 입력하세요" aria-label="챗봇 질문"/><button type="submit">↑</button></form></section></template>
+<script setup>
+import { ref, nextTick } from 'vue'
+const open = ref(false),
+  text = ref(''),
+  messages = ref(JSON.parse(localStorage.getItem('localhub_chat_history_v1') || '[]'))
+function send(q = text.value) {
+  if (!q.trim()) return
+  messages.value.push(
+    { role: 'user', text: q },
+    { role: 'bot', text: '체험 모드예요. 상단 지도와 카테고리에서 원하는 지역 정보를 찾아보세요!' },
+  )
+  localStorage.setItem('localhub_chat_history_v1', JSON.stringify(messages.value))
+  text.value = ''
+  nextTick(() => {})
+}
+</script>
+<template>
+  <button v-if="!open" class="chat-fab" type="button" @click="open = true">
+    <b>✦</b><span>서울 여행 도우미</span>
+  </button>
+  <section v-else class="chat-panel" aria-label="서울 여행 도우미">
+    <header>
+      <div><small>LOCALHUB AI</small><b>서울 여행 도우미</b></div>
+      <button type="button" aria-label="닫기" @click="open = false">×</button>
+    </header>
+    <div class="messages">
+      <div v-if="!messages.length" class="welcome">
+        <b>어떤 서울을 찾고 있나요?</b>
+        <p>지역이나 관심사를 말씀해주세요.</p>
+      </div>
+      <p v-for="(m, i) in messages" :key="i" :class="m.role">{{ m.text }}</p>
+    </div>
+    <div class="suggest">
+      <button
+        v-for="q in ['한강 근처 관광지', '비 오는 날 문화시설']"
+        :key="q"
+        type="button"
+        @click="send(q)"
+      >
+        {{ q }}
+      </button>
+    </div>
+    <form @submit.prevent="send()">
+      <input v-model="text" placeholder="질문을 입력하세요" aria-label="챗봇 질문" /><button
+        type="submit"
+      >
+        ↑
+      </button>
+    </form>
+  </section>
+</template>

@@ -1,3 +1,42 @@
-import{ref,computed}from'vue';import{categories,districts}from'../data/categories.js'
-const places=ref([]),loading=ref(false),error=ref('');const fallback=()=>categories.flatMap((c,ci)=>districts.map((d,i)=>({id:`${ci}-${i}`,title:`${d} ${c.name} 명소`,category:c.name,district:d,address:`서울특별시 ${d}`,latitude:37.45+(i%6)*.025,longitude:126.82+(i%5)*.07,image:null,description:`${d}에서 발견하는 ${c.name} 이야기입니다.`})))
-export function useSeoulPlaces(){async function load(){if(places.value.length)return;loading.value=true;try{places.value=fallback()}catch{error.value='장소 데이터를 불러오지 못했습니다.'}finally{loading.value=false}}return{places,loading,error,load,byDistrict:d=>computed(()=>d==='서울전체'?places.value:places.value.filter(p=>p.district===d))}}
+import { ref, computed } from 'vue'
+import { categories, districts } from '../data/categories.js'
+const places = ref([]),
+  loading = ref(false),
+  error = ref('')
+const fallback = () =>
+  categories.flatMap((c, ci) =>
+    districts.map((d, i) => ({
+      id: `${ci}-${i}`,
+      title: `${d} ${c.name} 명소`,
+      category: c.name,
+      district: d,
+      address: `서울특별시 ${d}`,
+      latitude: 37.45 + (i % 6) * 0.025,
+      longitude: 126.82 + (i % 5) * 0.07,
+      image: null,
+      description: `${d}에서 발견하는 ${c.name} 이야기입니다.`,
+    })),
+  )
+export function useSeoulPlaces() {
+  async function load() {
+    if (places.value.length) return
+    loading.value = true
+    try {
+      places.value = fallback()
+    } catch {
+      error.value = '장소 데이터를 불러오지 못했습니다.'
+    } finally {
+      loading.value = false
+    }
+  }
+  return {
+    places,
+    loading,
+    error,
+    load,
+    byDistrict: (d) =>
+      computed(() =>
+        d === '서울전체' ? places.value : places.value.filter((p) => p.district === d),
+      ),
+  }
+}
