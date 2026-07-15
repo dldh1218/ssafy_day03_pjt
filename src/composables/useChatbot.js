@@ -5,108 +5,103 @@ import { useSeoulPlaces } from './useSeoulPlaces.js'
 const HISTORY_KEY = 'localhub_chat_history_v1'
 const CONTEXT_LIMIT = 25
 const HISTORY_TURNS = 10
-
 const CATEGORY_KEYWORDS = {
-  관광지: ['관광지', '관광', '명소', '가볼', '가 볼', '여행지', '구경'],
-  문화시설: ['문화시설', '문화', '박물관', '미술관', '전시', '공연장', '도서관'],
-  레포츠: ['레포츠', '스포츠', '운동', '액티비티', '체육'],
-  여행코스: ['여행코스', '여행 코스', '코스', '루트', '동선'],
+  관광지: ['관광', '명소', '가볼 곳', '여행지', '구경'],
+  문화시설: ['문화', '박물관', '미술관', '전시', '공연장', '도서관'],
   축제공연행사: ['축제', '행사', '공연', '페스티벌'],
+  여행코스: ['여행 코스', '코스', '루트', '동선'],
+  레포츠: ['레포츠', '스포츠', '운동', '액티비티', '체육'],
+  숙박: ['숙박', '호텔', '숙소', '스테이'],
+  쇼핑: ['쇼핑', '백화점', '시장', '상점'],
 }
 
 function detectDistrict(question) {
-  return districts.find((d) => question.includes(d)) || null
+  return districts.find((district) => question.includes(district)) || null
 }
 function detectCategories(question) {
   return categories
     .filter(
-      (c) =>
-        question.includes(c.name) ||
-        (CATEGORY_KEYWORDS[c.name] || []).some((k) => question.includes(k)),
+      (category) =>
+        question.includes(category.name) ||
+        (CATEGORY_KEYWORDS[category.name] || []).some((keyword) => question.includes(keyword)),
     )
-    .map((c) => c.name)
-}
-function summarize(p) {
-  return { title: p.title, category: p.category, district: p.district, address: p.address }
+    .map((category) => category.name)
 }
 function sampleEvenly(pool, limit) {
   const groups = new Map()
-  for (const p of pool) {
-    if (!groups.has(p.category)) groups.set(p.category, [])
-    groups.get(p.category).push(p)
-  }
-  const cats = [...groups.keys()]
-  const perCat = Math.max(1, Math.floor(limit / (cats.length || 1)))
-  return cats.flatMap((c) => groups.get(c).slice(0, perCat)).slice(0, limit)
+  pool.forEach((place) => {
+    if (!groups.has(place.category)) groups.set(place.category, [])
+    groups.get(place.category).push(place)
+  })
+  const groupList = [...groups.values()]
+  const perGroup = Math.max(1, Math.floor(limit / (groupList.length || 1)))
+  return groupList.flatMap((group) => group.slice(0, perGroup)).slice(0, limit)
 }
 function buildContext(question, places) {
   const district = detectDistrict(question)
-  const cats = detectCategories(question)
+  const selectedCategories = detectCategories(question)
   let pool = places
-  if (district) pool = pool.filter((p) => p.district === district)
-  if (cats.length) pool = pool.filter((p) => cats.includes(p.category))
+  if (district) pool = pool.filter((place) => place.district === district)
+  if (selectedCategories.length)
+    pool = pool.filter((place) => selectedCategories.includes(place.category))
   const sample = district ? pool.slice(0, CONTEXT_LIMIT) : sampleEvenly(pool, CONTEXT_LIMIT)
-  return { district, cats, sample: sample.map(summarize) }
+  return { district, selectedCategories, sample }
 }
-function buildSystemPrompt({ district, cats, sample }) {
-  const scope = [district, ...cats].filter(Boolean).join(' · ') || '서울 전역'
+function buildSystemPrompt({ district, selectedCategories, sample }) {
+  const scope = [district, ...selectedCategories].filter(Boolean).join(' · ') || '서울 전역'
   const rows = sample.length
     ? sample
-        .map((p) => `- ${p.title} · ${p.category} · ${p.district ?? '구 정보 없음'} · ${p.address}`)
+        .map(
+          (place) =>
+            `- ${place.title} · ${place.category} · ${place.district || '자치구 정보 없음'} · ${place.address || '주소 정보 없음'}`,
+        )
         .join('\n')
     : '(조건에 맞는 장소 데이터가 없습니다.)'
-  return `당신은 서울 지역 정보에 매우 해박하고 친근한 여행 도우미 "서울 여행 도우미"입니다.
-아래 [장소 데이터]를 근거로 서울의 관광지·문화시설·레포츠·여행코스를 추천하고 안내하세요.
+  return `당신은 서울 지역정보를 친절하고 정확하게 안내하는 LocalHub 여행 도우미입니다.
+아래 장소 데이터만 근거로 관광지, 문화시설, 레포츠, 여행코스, 숙박, 쇼핑, 축제·공연을 추천하세요.
 
-반드시 지킬 것:
-1. [장소 데이터]에 없는 장소를 지어내지 마세요. 근거가 없으면 "제가 가진 정보에는 없어요"라고 솔직히 답하세요.
-2. 축제·공연·행사의 구체적인 날짜나 일정 정보는 데이터에 없습니다. 장소나 이름은 안내하되, 언제 열리는지 물으면 지어내지 말고 모른다고 답하세요.
-3. 맛집·음식점 데이터는 없습니다. 맛집 추천을 요청받으면 "음식점 정보는 제공되지 않아요"라고 안내하세요.
-4. 한국어로, 너무 길지 않게 답하세요. 여러 곳을 추천할 땐 목록으로 정리하세요.
+규칙:
+1. 데이터에 없는 장소나 정보를 지어내지 마세요.
+2. 구체적인 날짜와 일정 정보가 없다면 모른다고 안내하세요.
+3. 음식점 데이터는 제공하지 않습니다.
+4. 한국어로 짧고 읽기 쉽게 답하고, 여러 장소는 목록으로 정리하세요.
 
 [검색 범위] ${scope}
-[장소 데이터] (이름 · 카테고리 · 자치구 · 주소, ${sample.length}건)
+[장소 데이터 ${sample.length}건]
 ${rows}`
 }
-
-function friendlyError(err) {
-  if (err instanceof TypeError) return '네트워크 연결을 확인해주세요.'
-  if (err?.status === 401)
-    return 'API 키가 올바르지 않아요. .env의 VITE_OPENAI_API_KEY를 확인해주세요.'
-  if (err?.status === 429) return '요청이 많아 잠시 후 다시 시도해주세요.'
-  return err?.message || '답변을 가져오지 못했어요. 잠시 후 다시 시도해주세요.'
+function friendlyError(error) {
+  if (error instanceof TypeError) return '네트워크 연결을 확인해주세요.'
+  if (error?.status === 401)
+    return 'API 키가 올바르지 않습니다. .env.local의 VITE_OPENAI_API_KEY를 확인해주세요.'
+  if (error?.status === 429) return '요청이 많습니다. 잠시 후 다시 시도해주세요.'
+  return error?.message || '답변을 가져오지 못했습니다. 잠시 후 다시 시도해주세요.'
 }
-
-async function callOpenAI(apiMessages) {
+async function callOpenAI(messages) {
   const key = import.meta.env.VITE_OPENAI_API_KEY
-  if (!key) {
-    const e = new Error('API 키가 설정되지 않았어요. .env의 VITE_OPENAI_API_KEY를 확인해주세요.')
-    e.status = 401
-    throw e
+  if (!key || key.includes('여기에_입력')) {
+    const error = new Error('API 키가 설정되지 않았습니다. .env.local을 확인해주세요.')
+    error.status = 401
+    throw error
   }
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-    body: JSON.stringify({
-      model: 'gpt-5-mini',
-      reasoning_effort: 'minimal',
-      messages: apiMessages,
-    }),
+    body: JSON.stringify({ model: 'gpt-5-mini', reasoning_effort: 'minimal', messages }),
   })
-  if (!res.ok) {
-    const body = await res.json().catch(() => null)
-    const e = new Error(body?.error?.message)
-    e.status = res.status
-    throw e
+  if (!response.ok) {
+    const body = await response.json().catch(() => null)
+    const error = new Error(body?.error?.message)
+    error.status = response.status
+    throw error
   }
-  const data = await res.json()
-  return data.choices?.[0]?.message?.content?.trim() || '답변을 받지 못했어요.'
+  const data = await response.json()
+  return data.choices?.[0]?.message?.content?.trim() || '답변을 받지 못했습니다.'
 }
 
-const messages = ref(JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]')),
-  pending = ref(false)
+const messages = ref(JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'))
+const pending = ref(false)
 const { places, load } = useSeoulPlaces()
-
 function persist() {
   localStorage.setItem(HISTORY_KEY, JSON.stringify(messages.value))
 }
@@ -122,16 +117,19 @@ export function useChatbot() {
       await load()
       const context = buildContext(question, places.value)
       const recent = messages.value
-        .filter((m) => m.role !== 'error')
+        .filter((message) => message.role !== 'error')
         .slice(-HISTORY_TURNS)
-        .map((m) => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text }))
+        .map((message) => ({
+          role: message.role === 'user' ? 'user' : 'assistant',
+          content: message.text,
+        }))
       const reply = await callOpenAI([
         { role: 'system', content: buildSystemPrompt(context) },
         ...recent,
       ])
       messages.value.push({ role: 'bot', text: reply })
-    } catch (err) {
-      messages.value.push({ role: 'error', text: friendlyError(err) })
+    } catch (error) {
+      messages.value.push({ role: 'error', text: friendlyError(error) })
     } finally {
       pending.value = false
       persist()
