@@ -1,42 +1,42 @@
-import { ref, computed } from 'vue'
-import { categories, districts } from '../data/categories.js'
-const places = ref([]),
-  loading = ref(false),
-  error = ref('')
-const fallback = () =>
-  categories.flatMap((c, ci) =>
-    districts.map((d, i) => ({
-      id: `${ci}-${i}`,
-      title: `${d} ${c.name} 명소`,
-      category: c.name,
-      district: d,
-      address: `서울특별시 ${d}`,
-      latitude: 37.45 + (i % 6) * 0.025,
-      longitude: 126.82 + (i % 5) * 0.07,
-      image: null,
-      description: `${d}에서 발견하는 ${c.name} 이야기입니다.`,
-    })),
-  )
+import { computed, ref } from 'vue'
+import { categories } from '../data/categories.js'
+import { normalizePlace } from '../utils/normalizePlaces.js'
+
+const places = ref([])
+const loading = ref(false)
+const error = ref('')
+
 export function useSeoulPlaces() {
   async function load() {
-    if (places.value.length) return
+    if (places.value.length || loading.value) return
     loading.value = true
-    try {
-      places.value = fallback()
-    } catch {
-      error.value = '장소 데이터를 불러오지 못했습니다.'
-    } finally {
-      loading.value = false
-    }
+    error.value = ''
+
+    const results = await Promise.allSettled(
+      categories.map(async ({ name }) => {
+        const response = await fetch(`/data/places/${encodeURIComponent(name)}.json`)
+        if (!response.ok) throw new Error(`${name} 데이터를 불러오지 못했습니다.`)
+        const data = await response.json()
+        return (data.items || []).map((item, index) => normalizePlace(item, name, index))
+      }),
+    )
+
+    places.value = results.flatMap((result) => (result.status === 'fulfilled' ? result.value : []))
+    const failedCount = results.filter((result) => result.status === 'rejected').length
+    if (failedCount) error.value = `${failedCount}개 카테고리 데이터를 불러오지 못했습니다.`
+    loading.value = false
   }
+
   return {
     places,
     loading,
     error,
     load,
-    byDistrict: (d) =>
+    byDistrict: (district) =>
       computed(() =>
-        d === '서울전체' ? places.value : places.value.filter((p) => p.district === d),
+        district === '서울전체'
+          ? places.value
+          : places.value.filter((place) => place.district === district),
       ),
   }
 }

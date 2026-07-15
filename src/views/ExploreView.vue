@@ -4,10 +4,11 @@ import { useRoute } from 'vue-router'
 import { categories } from '../data/categories.js'
 import { useSeoulPlaces } from '../composables/useSeoulPlaces.js'
 import { useCommunityPosts } from '../composables/useCommunityPosts.js'
+import { useCommunityComments } from '../composables/useCommunityComments.js'
 const route = useRoute(),
   district = computed(() => decodeURIComponent(route.params.district)),
   category = ref(route.query.category || '전체'),
-  search = ref(''),
+  search = ref(route.query.q || ''),
   selected = ref(null),
   form = ref(false),
   detail = ref(null),
@@ -15,6 +16,9 @@ const route = useRoute(),
   error = ref('')
 const { places, load } = useSeoulPlaces(),
   { posts, create, update, remove } = useCommunityPosts()
+const { comments, create: createComment, remove: removeComment } = useCommunityComments()
+const commentDrafts = ref({})
+const commenterName = ref(localStorage.getItem('localhub_current_user_v1') || '')
 const filtered = computed(() =>
   places.value.filter(
     (p) =>
@@ -23,6 +27,7 @@ const filtered = computed(() =>
       p.title.includes(search.value),
   ),
 )
+const visibleMarkers = computed(() => filtered.value.slice(0, 300))
 const placePosts = computed(() =>
   posts.value
     .filter((p) => p.placeId === selected.value?.id)
@@ -73,6 +78,28 @@ function del(p) {
   const pw = prompt('게시글 비밀번호를 입력하세요.')
   if (pw !== null && !remove(p.id, pw)) alert('비밀번호가 일치하지 않습니다.')
 }
+function commentsFor(postId) {
+  return comments.value.filter((comment) => comment.postId === postId)
+}
+function submitComment(postId) {
+  const comment = commentDrafts.value[postId]
+  if (
+    !commenterName.value.trim() ||
+    !comment?.content.trim() ||
+    !/^\d{4,}$/.test(comment?.password)
+  ) {
+    alert('이름, 댓글 내용, 숫자 4자리 이상의 비밀번호를 입력하세요.')
+    return
+  }
+  localStorage.setItem('localhub_current_user_v1', commenterName.value.trim())
+  createComment({ postId, author: commenterName.value.trim(), ...comment })
+  commentDrafts.value[postId] = { content: '', password: '' }
+}
+function deleteComment(comment) {
+  const password = prompt('댓글 비밀번호를 입력하세요.')
+  if (password !== null && !removeComment(comment.id, password))
+    alert('비밀번호가 일치하지 않습니다.')
+}
 onMounted(async () => {
   await load()
   selected.value = places.value.find((p) => p.id === route.query.placeId) || filtered.value[0]
@@ -80,6 +107,12 @@ onMounted(async () => {
 watch(filtered, (v) => {
   if (!v.includes(selected.value)) selected.value = v[0]
 })
+watch(
+  placePosts,
+  (items) =>
+    items.forEach((post) => (commentDrafts.value[post.id] ||= { content: '', password: '' })),
+  { immediate: true },
+)
 </script>
 <template>
   <div class="explore">
@@ -110,7 +143,7 @@ watch(filtered, (v) => {
       <section class="place-map" aria-label="장소 지도">
         <div class="river"></div>
         <button
-          v-for="p in filtered"
+          v-for="p in visibleMarkers"
           :key="p.id"
           type="button"
           class="marker"
@@ -165,6 +198,30 @@ watch(filtered, (v) => {
               <button type="button" @click="edit(p)">수정</button
               ><button type="button" @click="del(p)">삭제</button>
             </div>
+            <div class="comment-list">
+              <div v-for="comment in commentsFor(p.id)" :key="comment.id" class="comment-item">
+                <p>
+                  <b>{{ comment.author }}</b> {{ comment.content }}
+                </p>
+                <button type="button" @click="deleteComment(comment)">삭제</button>
+              </div>
+            </div>
+            <form class="comment-form" @submit.prevent="submitComment(p.id)">
+              <input v-model="commenterName" placeholder="표시 이름" aria-label="댓글 작성자" />
+              <input
+                v-model="commentDrafts[p.id].content"
+                placeholder="댓글을 입력하세요"
+                aria-label="댓글 내용"
+              />
+              <input
+                v-model="commentDrafts[p.id].password"
+                type="password"
+                inputmode="numeric"
+                placeholder="비밀번호"
+                aria-label="댓글 비밀번호"
+              />
+              <button type="submit">등록</button>
+            </form>
           </article>
           <p v-if="!placePosts.length" class="muted">첫 번째 이야기를 남겨보세요.</p>
         </div>
