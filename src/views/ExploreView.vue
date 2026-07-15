@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -12,6 +12,8 @@ import { useCommunityComments } from '../composables/useCommunityComments.js'
 
 const MARKER_TONE = Object.fromEntries(categories.map((item) => [item.name, item.tone]))
 const categoryIcon = Object.fromEntries(categories.map((item) => [item.name, item.icon]))
+const SEOUL_CENTER = [37.5665, 126.978]
+const SEOUL_BOUNDS = L.latLngBounds([37.4, 126.75], [37.72, 127.2])
 const route = useRoute()
 const district = computed(() => decodeURIComponent(route.params.district))
 const category = ref(route.query.category || '전체')
@@ -19,13 +21,24 @@ const search = ref(route.query.q || '')
 const selected = ref(null)
 const formOpen = ref(false)
 const editingPost = ref(null)
-const postDraft = ref({ title: '', content: '', password: '' })
+const editingPassword = ref('')
+const postDetail = ref(null)
+const postAuth = ref({ open: false, action: '', postId: '', password: '', error: '' })
+const postDraft = ref({ title: '', content: '', password: '', image: '' })
 const formError = ref('')
 const commentDrafts = ref({})
 const commenterName = ref(localStorage.getItem('localhub_current_user_v1') || '')
 const mapEl = ref(null)
 const { places, load } = useSeoulPlaces()
-const { posts, create: createPost, update: updatePost, remove: removePost } = useCommunityPosts()
+const {
+  posts,
+  create: createPost,
+  update: updatePost,
+  remove: removePost,
+  incrementViews,
+  toggleLike,
+  seedMockPosts,
+} = useCommunityPosts()
 const { comments, create: createComment, remove: removeComment } = useCommunityComments()
 
 const filteredPlaces = computed(() => {
@@ -81,13 +94,20 @@ function fitToPoints(points) {
   window.setTimeout(release, 800)
   map.flyToBounds(points, { padding: [48, 48], maxZoom: 15, duration: 0.6 })
 }
+function isInsideSeoul(place) {
+  return (
+    Number.isFinite(place.lat) &&
+    Number.isFinite(place.lng) &&
+    SEOUL_BOUNDS.contains([place.lat, place.lng])
+  )
+}
 function renderMarkers() {
   if (!map || !markerLayer) return
   markerLayer.clearLayers()
   markerRefs.clear()
   const points = []
   filteredPlaces.value.forEach((place) => {
-    if (!place.lat || !place.lng) return
+    if (!isInsideSeoul(place)) return
     const marker = L.marker([place.lat, place.lng], {
       icon: buildMarkerIcon(place, selected.value?.id === place.id),
     })
@@ -97,7 +117,10 @@ function renderMarkers() {
     markerRefs.set(place.id, marker)
     points.push([place.lat, place.lng])
   })
-  if (!userInteracted) fitToPoints(points)
+  if (!userInteracted) {
+    if (district.value === '서울전체') map.setView(SEOUL_CENTER, 11)
+    else fitToPoints(points)
+  }
 }
 function renderBoundary() {
   if (!map) return
@@ -113,17 +136,64 @@ function renderBoundary() {
 function commentsFor(postId) {
   return comments.value.filter((comment) => comment.postId === postId)
 }
+const visitorId = (() => {
+  const key = 'localhub_visitor_id_v1'
+  const saved = localStorage.getItem(key)
+  if (saved) return saved
+  const created = crypto.randomUUID()
+  localStorage.setItem(key, created)
+  return created
+})()
+function openPostDetail(post) {
+  postDetail.value = post
+  incrementViews(post.id)
+}
+function isLiked(post) {
+  return post?.likedBy?.includes(visitorId) || false
+}
+function likePost(post) {
+  toggleLike(post.id, visitorId)
+  postDetail.value = posts.value.find((item) => item.id === post.id) || post
+}
 function openPostForm() {
   editingPost.value = null
-  postDraft.value = { title: '', content: '', password: '' }
+  postDraft.value = { title: '', content: '', password: '', image: '' }
   formError.value = ''
   formOpen.value = true
 }
-function editPost(post) {
+function startEditingPost(post, password) {
+  postDetail.value = null
   editingPost.value = post
-  postDraft.value = { title: post.title, content: post.content, password: '' }
+  editingPassword.value = password
+  postDraft.value = {
+    title: post.title,
+    content: post.content,
+    password: '',
+    image: post.image || '',
+  }
   formError.value = ''
   formOpen.value = true
+}
+function requestPostAction(action, post) {
+  postAuth.value = { open: true, action, postId: post.id, password: '', error: '' }
+}
+function confirmPostAction() {
+  const auth = postAuth.value
+  const currentPost = posts.value.find((post) => post.id === auth.postId)
+  if (!currentPost) {
+    auth.error = '게시글을 찾을 수 없습니다.'
+    return
+  }
+  if (String(currentPost.password) !== auth.password.trim()) {
+    auth.error = '비밀번호가 일치하지 않습니다.'
+    return
+  }
+  if (auth.action === 'edit') startEditingPost(currentPost, auth.password.trim())
+  else {
+    removePost(currentPost.id, auth.password.trim())
+    postDetail.value = null
+  }
+  postAuth.value = { open: false, action: '', postId: '', password: '', error: '' }
 }
 function submitPost() {
   formError.value = ''
@@ -131,14 +201,18 @@ function submitPost() {
     return (formError.value = '제목은 2자 이상 입력하세요.')
   if (postDraft.value.content.trim().length < 5)
     return (formError.value = '내용은 5자 이상 입력하세요.')
-  if (!/^\d{4,}$/.test(postDraft.value.password))
+  if (!editingPost.value && !/^\d{4,}$/.test(postDraft.value.password))
     return (formError.value = '비밀번호는 숫자 4자리 이상이어야 합니다.')
 
   if (editingPost.value) {
     const updated = updatePost(
       editingPost.value.id,
-      { title: postDraft.value.title, content: postDraft.value.content },
-      postDraft.value.password,
+      {
+        title: postDraft.value.title,
+        content: postDraft.value.content,
+        image: postDraft.value.image,
+      },
+      editingPassword.value,
     )
     if (!updated) return (formError.value = '비밀번호가 일치하지 않습니다.')
   } else {
@@ -152,10 +226,24 @@ function submitPost() {
   }
   formOpen.value = false
 }
-function deletePost(post) {
-  const password = window.prompt('게시글 비밀번호를 입력하세요.')
-  if (password !== null && !removePost(post.id, password))
-    window.alert('비밀번호가 일치하지 않습니다.')
+function selectPostImage(event) {
+  const file = event.target.files?.[0]
+  formError.value = ''
+  if (!file) return
+  if (!file.type.startsWith('image/')) {
+    formError.value = '이미지 파일만 첨부할 수 있습니다.'
+    event.target.value = ''
+    return
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    formError.value = '사진은 2MB 이하로 첨부해주세요.'
+    event.target.value = ''
+    return
+  }
+  const reader = new FileReader()
+  reader.onload = () => (postDraft.value.image = String(reader.result || ''))
+  reader.onerror = () => (formError.value = '사진을 불러오지 못했습니다.')
+  reader.readAsDataURL(file)
 }
 function submitComment(postId) {
   const draft = commentDrafts.value[postId]
@@ -175,12 +263,17 @@ function deleteComment(comment) {
 
 onMounted(async () => {
   await load()
-  selected.value =
-    places.value.find((place) => place.id === route.query.placeId) || filteredPlaces.value[0]
-  map = L.map(mapEl.value, { scrollWheelZoom: false, zoomControl: false }).setView(
-    [37.5665, 126.978],
-    11,
-  )
+  seedMockPosts(places.value)
+  selected.value = route.query.placeId
+    ? places.value.find((place) => place.id === route.query.placeId) || null
+    : null
+  map = L.map(mapEl.value, {
+    scrollWheelZoom: false,
+    zoomControl: false,
+    minZoom: 10,
+    maxBounds: SEOUL_BOUNDS.pad(0.15),
+    maxBoundsViscosity: 0.9,
+  }).setView(SEOUL_CENTER, 11)
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors',
     maxZoom: 19,
@@ -215,12 +308,13 @@ watch(filteredPlaces, (items) => {
     lastDistrict = district.value
     userInteracted = false
   }
-  if (!items.includes(selected.value)) selected.value = items[0] || null
+  if (selected.value && !items.includes(selected.value)) selected.value = null
   renderMarkers()
 })
 watch(selected, (next, previous) => {
   if (previous) markerRefs.get(previous.id)?.setIcon(buildMarkerIcon(previous, false))
   if (next) markerRefs.get(next.id)?.setIcon(buildMarkerIcon(next, true))
+  nextTick(() => map?.invalidateSize({ pan: false }))
 })
 watch(district, renderBoundary)
 watch(
@@ -256,7 +350,7 @@ watch(
         aria-label="장소 검색"
       />
     </section>
-    <div class="explore-layout">
+    <div class="explore-layout" :class="{ 'has-sidebar': selected }">
       <section class="place-map" aria-label="장소 지도">
         <div ref="mapEl" class="leaflet-map"></div>
         <div v-if="!filteredPlaces.length" class="map-empty">조건에 맞는 장소가 없습니다.</div>
@@ -295,61 +389,198 @@ watch(
             <h3>이 장소의 이야기</h3>
             <button type="button" @click="openPostForm">글쓰기</button>
           </div>
-          <article v-for="post in selectedPlacePosts" :key="post.id">
-            <b>{{ post.title }}</b>
-            <p>{{ post.content }}</p>
-            <small
-              >{{ new Date(post.createdAt).toLocaleDateString('ko-KR') }} · 조회
-              {{ post.views }}</small
-            >
-            <div>
-              <button type="button" @click="editPost(post)">수정</button>
-              <button type="button" @click="deletePost(post)">삭제</button>
-            </div>
-            <div class="comment-list">
-              <div v-for="comment in commentsFor(post.id)" :key="comment.id" class="comment-item">
-                <p>
-                  <b>{{ comment.author }}</b> {{ comment.content }}
-                </p>
-                <button type="button" @click="deleteComment(comment)">삭제</button>
+          <article
+            v-for="post in selectedPlacePosts"
+            :key="post.id"
+            class="story-card"
+            tabindex="0"
+            role="button"
+            @click="openPostDetail(post)"
+            @keydown.enter="openPostDetail(post)"
+          >
+            <img v-if="post.image" class="story-thumb" :src="post.image" :alt="post.title" />
+            <div class="story-card-body">
+              <b>{{ post.title }}</b>
+              <p>{{ post.content }}</p>
+              <div class="story-card-meta">
+                <span>{{ new Date(post.createdAt).toLocaleDateString('ko-KR') }}</span>
+                <span>조회 {{ post.views || 0 }}</span>
+                <span>♥ {{ post.likedBy?.length || 0 }}</span>
+                <span>댓글 {{ commentsFor(post.id).length }}</span>
               </div>
             </div>
-            <form class="comment-form" @submit.prevent="submitComment(post.id)">
-              <input v-model="commenterName" placeholder="표시 이름" aria-label="댓글 작성자" />
-              <input
-                v-model="commentDrafts[post.id].content"
-                placeholder="댓글을 입력하세요"
-                aria-label="댓글 내용"
-              />
-              <input
-                v-model="commentDrafts[post.id].password"
-                type="password"
-                inputmode="numeric"
-                placeholder="비밀번호"
-                aria-label="댓글 비밀번호"
-              />
-              <button type="submit">등록</button>
-            </form>
+            <span class="story-arrow" aria-hidden="true">↗</span>
           </article>
           <p v-if="!selectedPlacePosts.length" class="muted">첫 번째 이야기를 남겨보세요.</p>
         </div>
       </aside>
     </div>
     <div v-if="formOpen" class="modal-back" @click.self="formOpen = false">
-      <form class="modal" @submit.prevent="submitPost">
-        <button type="button" class="close" @click="formOpen = false">×</button>
-        <small>{{ selected.title }}</small>
-        <h2>{{ editingPost ? '이야기 수정' : '새 이야기 작성' }}</h2>
-        <label>제목<input v-model="postDraft.title" maxlength="80" /></label>
-        <label>내용<textarea v-model="postDraft.content" rows="6"></textarea></label>
+      <form class="modal story-modal" @submit.prevent="submitPost">
+        <div class="modal-accent" aria-hidden="true"></div>
+        <button
+          type="button"
+          class="close modal-close"
+          aria-label="창 닫기"
+          @click="formOpen = false"
+        >
+          ×
+        </button>
+        <header class="modal-head">
+          <p class="eyebrow">LOCAL STORY · SEOUL</p>
+          <small>{{ selected.category }} · {{ selected.title }}</small>
+          <h2>{{ editingPost ? '이야기를 다듬어주세요' : '서울의 순간을 나눠주세요' }}</h2>
+          <p>직접 경험한 장소의 분위기와 유용한 정보를 기록해보세요.</p>
+        </header>
+        <div class="modal-fields">
+          <label
+            >제목<input
+              v-model="postDraft.title"
+              maxlength="80"
+              placeholder="이야기의 제목을 입력하세요"
+          /></label>
+          <label
+            >내용<textarea
+              v-model="postDraft.content"
+              rows="6"
+              placeholder="어떤 점이 좋았는지 자유롭게 들려주세요"
+            ></textarea>
+          </label>
+          <label class="image-upload">
+            <span>사진 첨부 <small>JPG, PNG 등 · 최대 2MB</small></span>
+            <input type="file" accept="image/*" @change="selectPostImage" />
+            <span v-if="!postDraft.image" class="upload-placeholder"><b>＋</b> 사진 선택하기</span>
+            <span v-else class="image-preview">
+              <img :src="postDraft.image" alt="첨부 사진 미리보기" />
+              <button type="button" @click.prevent="postDraft.image = ''">사진 삭제</button>
+            </span>
+          </label>
+          <label v-if="!editingPost"
+            >수정·삭제 비밀번호<input
+              v-model="postDraft.password"
+              type="password"
+              inputmode="numeric"
+              placeholder="숫자 4자리 이상"
+          /></label>
+        </div>
+        <p v-if="formError" class="form-error">{{ formError }}</p>
+        <div class="modal-actions">
+          <button type="button" class="modal-cancel" @click="formOpen = false">취소</button>
+          <button class="primary" type="submit">
+            {{ editingPost ? '수정하기' : '이야기 등록하기' }} →
+          </button>
+        </div>
+      </form>
+    </div>
+    <div v-if="postDetail" class="modal-back" @click.self="postDetail = null">
+      <article class="modal post-detail-modal">
+        <button
+          type="button"
+          class="close modal-close"
+          aria-label="상세 닫기"
+          @click="postDetail = null"
+        >
+          ×
+        </button>
+        <header class="post-detail-head">
+          <p class="eyebrow">LOCAL STORY</p>
+          <small>{{ postDetail.category }} · {{ postDetail.placeName }}</small>
+          <h2>{{ postDetail.title }}</h2>
+          <div class="post-detail-meta">
+            <span>{{ new Date(postDetail.createdAt).toLocaleDateString('ko-KR') }}</span>
+            <span>조회 {{ postDetail.views || 0 }}</span>
+            <span>댓글 {{ commentsFor(postDetail.id).length }}</span>
+          </div>
+        </header>
+        <img
+          v-if="postDetail.image"
+          class="post-detail-image"
+          :src="postDetail.image"
+          :alt="postDetail.title"
+        />
+        <p class="post-detail-content">{{ postDetail.content }}</p>
+        <div class="post-detail-actions">
+          <button
+            type="button"
+            class="like-button"
+            :class="{ liked: isLiked(postDetail) }"
+            @click="likePost(postDetail)"
+          >
+            <span>{{ isLiked(postDetail) ? '♥' : '♡' }}</span>
+            좋아요 {{ postDetail.likedBy?.length || 0 }}
+          </button>
+          <div>
+            <button type="button" @click="requestPostAction('edit', postDetail)">수정</button>
+            <button type="button" @click="requestPostAction('delete', postDetail)">삭제</button>
+          </div>
+        </div>
+        <section class="detail-comments">
+          <div class="detail-comment-head">
+            <h3>
+              댓글 <b>{{ commentsFor(postDetail.id).length }}</b>
+            </h3>
+          </div>
+          <div v-if="commentsFor(postDetail.id).length" class="comment-list">
+            <div
+              v-for="comment in commentsFor(postDetail.id)"
+              :key="comment.id"
+              class="comment-item"
+            >
+              <div>
+                <b>{{ comment.author }}</b>
+                <p>{{ comment.content }}</p>
+              </div>
+              <button type="button" @click="deleteComment(comment)">삭제</button>
+            </div>
+          </div>
+          <p v-else class="muted">아직 댓글이 없습니다. 첫 댓글을 남겨보세요.</p>
+          <form class="detail-comment-form" @submit.prevent="submitComment(postDetail.id)">
+            <textarea
+              v-model="commentDrafts[postDetail.id].content"
+              rows="3"
+              placeholder="이 장소에 대한 생각을 남겨주세요"
+              aria-label="댓글 내용"
+            ></textarea>
+            <input v-model="commenterName" placeholder="표시 이름" aria-label="댓글 작성자" />
+            <input
+              v-model="commentDrafts[postDetail.id].password"
+              type="password"
+              inputmode="numeric"
+              placeholder="삭제용 비밀번호"
+              aria-label="댓글 비밀번호"
+            />
+            <button type="submit">댓글 등록</button>
+          </form>
+        </section>
+      </article>
+    </div>
+    <div
+      v-if="postAuth.open"
+      class="modal-back auth-modal-back"
+      @click.self="postAuth.open = false"
+    >
+      <form class="modal auth-modal" @submit.prevent="confirmPostAction">
+        <button
+          type="button"
+          class="close modal-close"
+          aria-label="인증 창 닫기"
+          @click="postAuth.open = false"
+        >
+          ×
+        </button>
+        <p class="eyebrow">AUTHOR CHECK</p>
+        <h2>{{ postAuth.action === 'edit' ? '게시글 수정' : '게시글 삭제' }}</h2>
+        <p>작성할 때 설정한 비밀번호를 입력해주세요.</p>
         <label
-          >수정·삭제 비밀번호<input
-            v-model="postDraft.password"
+          >비밀번호<input
+            v-model="postAuth.password"
             type="password"
             inputmode="numeric"
+            autofocus
+            placeholder="숫자 4자리 이상"
         /></label>
-        <p v-if="formError" class="form-error">{{ formError }}</p>
-        <button class="primary" type="submit">{{ editingPost ? '수정하기' : '등록하기' }}</button>
+        <p v-if="postAuth.error" class="form-error">{{ postAuth.error }}</p>
+        <button class="primary auth-submit" type="submit">확인</button>
       </form>
     </div>
   </div>

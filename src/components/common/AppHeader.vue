@@ -11,8 +11,8 @@ const open = ref(false)
     <button class="menu" type="button" aria-label="메뉴 열기" @click="open = !open">☰</button>
     <nav :class="{ open }">
       <RouterLink to="/">서울 탐색</RouterLink>
+      <a href="/#categories">카테고리</a>
       <a href="/#community">커뮤니티</a>
-      <a href="/#about">데이터 안내</a>
     </nav>
   </header>
 </template>

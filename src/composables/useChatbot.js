@@ -21,7 +21,8 @@ function detectCategories(question) {
   return categories
     .filter(
       (c) =>
-        question.includes(c.name) || (CATEGORY_KEYWORDS[c.name] || []).some((k) => question.includes(k)),
+        question.includes(c.name) ||
+        (CATEGORY_KEYWORDS[c.name] || []).some((k) => question.includes(k)),
     )
     .map((c) => c.name)
 }
@@ -50,7 +51,9 @@ function buildContext(question, places) {
 function buildSystemPrompt({ district, cats, sample }) {
   const scope = [district, ...cats].filter(Boolean).join(' · ') || '서울 전역'
   const rows = sample.length
-    ? sample.map((p) => `- ${p.title} · ${p.category} · ${p.district ?? '구 정보 없음'} · ${p.address}`).join('\n')
+    ? sample
+        .map((p) => `- ${p.title} · ${p.category} · ${p.district ?? '구 정보 없음'} · ${p.address}`)
+        .join('\n')
     : '(조건에 맞는 장소 데이터가 없습니다.)'
   return `당신은 서울 지역 정보에 매우 해박하고 친근한 여행 도우미 "서울 여행 도우미"입니다.
 아래 [장소 데이터]를 근거로 서울의 관광지·문화시설·레포츠·여행코스를 추천하고 안내하세요.
@@ -68,7 +71,8 @@ ${rows}`
 
 function friendlyError(err) {
   if (err instanceof TypeError) return '네트워크 연결을 확인해주세요.'
-  if (err?.status === 401) return 'API 키가 올바르지 않아요. .env의 VITE_OPENAI_API_KEY를 확인해주세요.'
+  if (err?.status === 401)
+    return 'API 키가 올바르지 않아요. .env의 VITE_OPENAI_API_KEY를 확인해주세요.'
   if (err?.status === 429) return '요청이 많아 잠시 후 다시 시도해주세요.'
   return err?.message || '답변을 가져오지 못했어요. 잠시 후 다시 시도해주세요.'
 }

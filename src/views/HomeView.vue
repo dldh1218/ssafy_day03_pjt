@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { categories } from '../data/categories.js'
 import { useSeoulPlaces } from '../composables/useSeoulPlaces.js'
@@ -12,13 +12,21 @@ const router = useRouter(),
   { places, load } = useSeoulPlaces(),
   { latest, posts } = useCommunityPosts(),
   { comments } = useCommunityComments()
-const shown = ref(8)
+const PAGE_SIZE = 6
+const shown = ref(PAGE_SIZE)
+const loadSentinel = ref(null)
+const isLoadingStories = ref(false)
 const searchQuery = ref('')
+const suggestionsOpen = ref(false)
+const heroScrollProgress = ref(0)
+const heroScrollDirection = ref('down')
 const reelOne = ref([])
 const reelTwo = ref([])
-const categoryOrder = ['관광지', '여행 코스', '문화시설', '축제공연행사', '레포츠', '숙박', '쇼핑']
+const categoryOrder = ['관광지', '여행코스', '문화시설', '축제공연행사', '레포츠', '숙박', '쇼핑']
 const orderedCategories = computed(() =>
-  categoryOrder.map((name) => categories.find((category) => category.name === name)),
+  categoryOrder
+    .map((name) => categories.find((category) => category.name === name))
+    .filter(Boolean),
 )
 const project = ([x, y]) => [(x - 126.76) * 620, (37.71 - y) * 760],
   ring = (r) => r.map((p, i) => `${i ? 'L' : 'M'}${project(p)}`).join(' ') + 'Z',
@@ -48,6 +56,27 @@ const count = (c) => places.value.filter((p) => p.category === c).length
 const firstImage = (category) =>
   places.value.find((place) => place.category === category && place.image)?.image
 const visible = computed(() => latest.value.slice(0, shown.value))
+const hasMoreStories = computed(() => shown.value < latest.value.length)
+const searchSuggestions = computed(() => {
+  const query = searchQuery.value.trim().toLocaleLowerCase('ko-KR')
+  const candidates = places.value.filter((place) => place.title && place.district)
+  if (!query) return candidates.filter((place) => place.image).slice(0, 6)
+  return candidates
+    .filter((place) =>
+      [place.title, place.district, place.category].some((value) =>
+        value?.toLocaleLowerCase('ko-KR').includes(query),
+      ),
+    )
+    .slice(0, 6)
+})
+const heroCopyStyle = computed(() => {
+  const distance = heroScrollProgress.value * 105
+  const y = heroScrollDirection.value === 'down' ? -distance : distance
+  return {
+    opacity: Math.max(0, 1 - heroScrollProgress.value * 1.18),
+    transform: `translate3d(0, ${y}px, 0)`,
+  }
+})
 const hasCommunityRanking = computed(() => posts.value.length > 0)
 const rankedPlaces = computed(() => {
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
@@ -83,6 +112,42 @@ const searchPlaces = () => {
   const query = searchQuery.value.trim()
   router.push({ path: '/explore/서울전체', query: query ? { q: query } : {} })
 }
+const selectSuggestion = (place) => {
+  searchQuery.value = place.title
+  suggestionsOpen.value = false
+  router.push(`/explore/${encodeURIComponent(place.district)}?placeId=${place.id}`)
+}
+const closeSuggestions = () => window.setTimeout(() => (suggestionsOpen.value = false), 120)
+let storyObserver = null
+let storyLoadTimer = null
+let heroScrollFrame = null
+let previousScrollY = 0
+function updateHeroMotion() {
+  if (heroScrollFrame) return
+  heroScrollFrame = window.requestAnimationFrame(() => {
+    const currentScrollY = window.scrollY
+    heroScrollDirection.value = currentScrollY >= previousScrollY ? 'down' : 'up'
+    heroScrollProgress.value = Math.min(currentScrollY / (window.innerHeight * 0.72), 1)
+    previousScrollY = currentScrollY
+    heroScrollFrame = null
+  })
+}
+function observeStorySentinel() {
+  if (!storyObserver || !loadSentinel.value || !hasMoreStories.value) return
+  storyObserver.disconnect()
+  storyObserver.observe(loadSentinel.value)
+}
+function loadMoreStories() {
+  if (isLoadingStories.value || !hasMoreStories.value) return
+  isLoadingStories.value = true
+  storyObserver?.disconnect()
+  storyLoadTimer = window.setTimeout(async () => {
+    shown.value = Math.min(shown.value + PAGE_SIZE, latest.value.length)
+    isLoadingStories.value = false
+    await nextTick()
+    observeStorySentinel()
+  }, 550)
+}
 watch(
   places,
   (items) => {
@@ -100,9 +165,30 @@ watch(
 )
 onMounted(async () => {
   load()
+  storyObserver = new IntersectionObserver(
+    ([entry]) => {
+      if (entry?.isIntersecting) loadMoreStories()
+    },
+    { rootMargin: '320px 0px', threshold: 0.01 },
+  )
+  previousScrollY = window.scrollY
+  window.addEventListener('scroll', updateHeroMotion, { passive: true })
+  updateHeroMotion()
+  await nextTick()
+  observeStorySentinel()
   try {
     features.value = (await (await fetch('/data/seoul/seoul-districts.geojson')).json()).features
   } catch {}
+})
+watch(hasMoreStories, async () => {
+  await nextTick()
+  observeStorySentinel()
+})
+onBeforeUnmount(() => {
+  storyObserver?.disconnect()
+  if (storyLoadTimer) window.clearTimeout(storyLoadTimer)
+  window.removeEventListener('scroll', updateHeroMotion)
+  if (heroScrollFrame) window.cancelAnimationFrame(heroScrollFrame)
 })
 </script>
 <template>
@@ -116,7 +202,7 @@ onMounted(async () => {
         <span class="motion-word word-two">PLAY</span>
         <span class="motion-word word-three">STAY</span>
       </div>
-      <div class="hero-copy">
+      <div class="hero-copy" :style="heroCopyStyle">
         <p class="eyebrow">LOCALHUB · SEOUL TRAVEL GUIDE</p>
         <h1><span>SEOUL</span><em>오늘, 서울을 발견하는 방법</em></h1>
         <p>
@@ -127,14 +213,38 @@ onMounted(async () => {
           <input
             v-model="searchQuery"
             type="search"
-            list="place-suggestions"
             placeholder="지역, 장소, 하고 싶은 일을 검색해보세요"
             aria-label="서울 장소 통합 검색"
+            autocomplete="off"
+            aria-autocomplete="list"
+            :aria-expanded="suggestionsOpen"
+            @focus="suggestionsOpen = true"
+            @input="suggestionsOpen = true"
+            @keydown.esc="suggestionsOpen = false"
+            @blur="closeSuggestions"
           />
-          <datalist id="place-suggestions">
-            <option v-for="place in places.slice(0, 80)" :key="place.id" :value="place.title" />
-          </datalist>
           <button type="submit">검색</button>
+          <div v-if="suggestionsOpen" class="search-suggestions" role="listbox">
+            <p>{{ searchQuery.trim() ? '검색 제안' : '지금 주목받는 서울' }}</p>
+            <button
+              v-for="place in searchSuggestions"
+              :key="place.id"
+              type="button"
+              role="option"
+              @mousedown.prevent="selectSuggestion(place)"
+            >
+              <img v-if="place.image" :src="place.image" alt="" />
+              <span v-else aria-hidden="true">{{
+                categories.find((item) => item.name === place.category)?.icon || '●'
+              }}</span>
+              <b>{{ place.title }}</b>
+              <small>{{ place.district }} · {{ place.category }}</small>
+              <i aria-hidden="true">↗</i>
+            </button>
+            <div v-if="!searchSuggestions.length" class="suggestion-empty">
+              일치하는 장소가 없습니다.
+            </div>
+          </div>
         </form>
         <div class="hero-actions">
           <a class="primary" href="#districts">서울 탐색 시작하기 <span>↘</span></a>
@@ -193,7 +303,7 @@ onMounted(async () => {
         </svg>
       </div>
     </section>
-    <section>
+    <section id="categories">
       <div class="section-head">
         <div>
           <p class="eyebrow">EXPLORE BY CATEGORY</p>
@@ -229,7 +339,15 @@ onMounted(async () => {
         <aside class="place-reels" aria-label="서울 장소 사진 모음">
           <div class="photo-reel reel-up">
             <div class="reel-track">
-              <article v-for="(place, index) in [...reelOne, ...reelOne]" :key="`up-${index}`">
+              <article
+                v-for="(place, index) in [...reelOne, ...reelOne]"
+                :key="`up-${index}`"
+                tabindex="0"
+                role="link"
+                :aria-label="`${place.title} 상세 지도 보기`"
+                @click="selectSuggestion(place)"
+                @keydown.enter="selectSuggestion(place)"
+              >
                 <img :src="place.image" :alt="place.title" />
                 <span>{{ place.title }}</span>
               </article>
@@ -237,7 +355,15 @@ onMounted(async () => {
           </div>
           <div class="photo-reel reel-down">
             <div class="reel-track">
-              <article v-for="(place, index) in [...reelTwo, ...reelTwo]" :key="`down-${index}`">
+              <article
+                v-for="(place, index) in [...reelTwo, ...reelTwo]"
+                :key="`down-${index}`"
+                tabindex="0"
+                role="link"
+                :aria-label="`${place.title} 상세 지도 보기`"
+                @click="selectSuggestion(place)"
+                @keydown.enter="selectSuggestion(place)"
+              >
                 <img :src="place.image" :alt="place.title" />
                 <span>{{ place.title }}</span>
               </article>
@@ -265,14 +391,22 @@ onMounted(async () => {
           <p>{{ p.content.slice(0, 90) }}</p>
           <span>{{ p.placeName }} · 조회 {{ p.views }}</span>
         </article>
+        <template v-if="isLoadingStories">
+          <article
+            v-for="index in PAGE_SIZE"
+            :key="`story-skeleton-${index}`"
+            class="story-skeleton"
+            aria-hidden="true"
+          >
+            <span></span><b></b><i></i><small></small>
+          </article>
+        </template>
       </div>
       <div v-else class="empty">
         <b>아직 등록된 이야기가 없습니다.</b>
         <p>서울의 장소를 둘러보고 첫 번째 후기를 남겨보세요.</p>
       </div>
-      <button v-if="shown < latest.length" class="more" type="button" @click="shown += 8">
-        이야기 더 보기
-      </button>
+      <div v-if="hasMoreStories" ref="loadSentinel" class="story-sentinel" aria-hidden="true"></div>
     </section>
     <section id="about" class="data-note">
       <b>서울 열린데이터를 더 가깝게.</b>
