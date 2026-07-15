@@ -83,7 +83,11 @@ async function callOpenAI(apiMessages) {
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-    body: JSON.stringify({ model: 'gpt-4o-mini', temperature: 0.4, messages: apiMessages }),
+    body: JSON.stringify({
+      model: 'gpt-5-mini',
+      reasoning_effort: 'minimal',
+      messages: apiMessages,
+    }),
   })
   if (!res.ok) {
     const body = await res.json().catch(() => null)
