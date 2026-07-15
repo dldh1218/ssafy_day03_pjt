@@ -14,7 +14,7 @@ export function useSeoulPlaces() {
 
     const results = await Promise.allSettled(
       categories.map(async ({ name }) => {
-        const response = await fetch(`/data/places/${encodeURIComponent(name)}.json`)
+        const response = await fetch(`/data/seoul/${encodeURIComponent(`서울_${name}.json`)}`)
         if (!response.ok) throw new Error(`${name} 데이터를 불러오지 못했습니다.`)
         const data = await response.json()
         return (data.items || []).map((item, index) => normalizePlace(item, name, index))

@@ -809,54 +809,114 @@ nav a.router-link-active {
 }
 .explore-layout {
   display: grid;
-  grid-template-columns: 1fr 400px;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 400px);
   min-height: 650px;
   background: #dae5e1;
 }
 .place-map {
   position: relative;
   overflow: hidden;
-  background-color: #e4ece8;
-  background-image: linear-gradient(
-    30deg,
-    #cddbd5 12%,
-    transparent 12.5%,
-    transparent 87%,
-    #cddbd5 87.5%
-  );
-  background-size: 80px 80px;
+  background-color: #e5eeea;
 }
-.river {
-  position: absolute;
-  top: 45%;
-  left: -15%;
-  width: 130%;
-  height: 85px;
-  background: #b3d9e8;
-  transform: rotate(-8deg);
+.leaflet-map {
+  width: 100%;
+  height: 100%;
 }
-.marker {
+.map-empty {
   position: absolute;
-  color: var(--orange);
+  z-index: 500;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  box-shadow: 0 4px 14px #0002;
+  font-size: 13px;
+  color: var(--ink);
+}
+.place-pin-wrap {
   background: none;
   border: 0;
-  font-size: 24px;
-  transform: translate(-50%, -50%);
 }
-.marker span {
-  display: none;
-  padding: 6px 9px;
-  color: var(--ink);
-  white-space: nowrap;
-  background: #fff;
-  border-radius: 5px;
-  box-shadow: 0 4px 14px #0002;
-  font-size: 11px;
+.place-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50% 50% 50% 4px;
+  transform: rotate(-45deg);
+  background: var(--pin-color, #7a8a90);
+  border: 2px solid white;
+  box-shadow: 0 3px 8px #0003;
+  color: white;
+  font-size: 13px;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
-.marker:hover span,
-.marker:focus span,
-.marker.active span {
+.place-pin::before {
+  content: '';
   display: block;
+  transform: rotate(45deg);
+}
+.place-pin > * {
+  transform: rotate(45deg);
+}
+.place-pin.is-selected {
+  width: 36px;
+  height: 36px;
+  border-width: 3px;
+  box-shadow:
+    0 4px 12px #0004,
+    0 0 0 4px #ffffffaa;
+  z-index: 10;
+}
+.cluster-pin-wrap {
+  background: none;
+  border: 0;
+}
+.cluster-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--blue), #4d94ad);
+  border: 3px solid #ffffffcc;
+  box-shadow: 0 3px 10px #0003;
+  color: white;
+  font-weight: 700;
+}
+.cluster-pin--sm {
+  font-size: 12px;
+}
+.cluster-pin--md {
+  font-size: 14px;
+  background: linear-gradient(135deg, #1f5c7a, var(--blue));
+}
+.cluster-pin--lg {
+  font-size: 16px;
+  background: linear-gradient(135deg, #174a63, #1f5c7a);
+}
+.leaflet-control-zoom a {
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px #0002;
+  color: var(--ink) !important;
+}
+.leaflet-locate-btn {
+  width: 30px;
+  height: 30px;
+  border: 2px solid rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 2px 8px #0002;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--blue);
+  cursor: pointer;
 }
 .sidebar {
   position: relative;
@@ -875,6 +935,8 @@ nav a.router-link-active {
   height: 180px;
   margin-bottom: 20px;
   padding: 18px;
+  background-size: cover;
+  background-position: center;
   display: flex;
   align-items: end;
   color: #fff;
@@ -1022,6 +1084,52 @@ nav a.router-link-active {
   padding: 18px;
   overflow: auto;
   background: #f4f6f4;
+}
+.messages > p {
+  max-width: 82%;
+  padding: 10px;
+  border-radius: 11px;
+  background: white;
+  white-space: pre-wrap;
+}
+.messages .user {
+  margin-left: auto;
+  background: #d9ecf2;
+}
+.messages .error {
+  background: #fbe1df;
+  color: #8a2b2b;
+}
+.messages .pending {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 14px 16px;
+}
+.messages .pending span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #99a5a2;
+  animation: chat-dot 1s infinite ease-in-out;
+}
+.messages .pending span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.messages .pending span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes chat-dot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
 }
 .suggest {
   padding: 8px;
@@ -1191,7 +1299,7 @@ nav a.router-link-active {
     right: 0;
     bottom: 0;
     left: 0;
-    z-index: 15;
+    z-index: 1200;
     max-height: 70vh;
     border-radius: 20px 20px 0 0;
     box-shadow: 0 -10px 30px #0002;

@@ -2,10 +2,10 @@ export const categories = [
   { name: '관광지', icon: '✦', tone: '#457b9d' },
   { name: '문화시설', icon: '◫', tone: '#795b9b' },
   { name: '축제공연행사', icon: '♫', tone: '#de6b48' },
-  { name: '여행 코스', icon: '↗', tone: '#3d9277' },
+  { name: '여행코스', icon: '↗', tone: '#3d9277' },
   { name: '레포츠', icon: '●', tone: '#357c91' },
-  { name: '숙박', icon: '⌂', tone: '#8c6b4f' },
-  { name: '쇼핑', icon: '◇', tone: '#bd6c75' },
+  { name: '숙박', icon: '▰', tone: '#385f8e' },
+  { name: '쇼핑', icon: '◆', tone: '#b64a3a' },
 ]
 export const districts = [
   '강남구',

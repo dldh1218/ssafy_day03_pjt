@@ -9,11 +9,11 @@ export function normalizePlace(raw, category, index) {
     category,
     district: getDistrict(address),
     address,
-    latitude: Number(raw.mapy) || null,
-    longitude: Number(raw.mapx) || null,
+    lat: Number(raw.mapy) || null,
+    lng: Number(raw.mapx) || null,
     image: raw.firstimage || raw.firstimage2 || null,
     description: `${raw.title || '이 장소'}에서 서울의 ${category}을(를) 경험해보세요.`,
-    phone: raw.tel || null,
+    tel: raw.tel || '',
     homepage: null,
   }
 }
