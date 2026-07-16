@@ -1,15 +1,25 @@
 import { ref, computed } from 'vue'
-const KEY = 'localhub_posts_v1',
+import communityMockData from '../data/communityMockData.json'
+const KEY = 'localhub_user_posts_v1',
+  LEGACY_KEY = 'localhub_posts_v1',
   posts = ref([])
 function read() {
   try {
-    posts.value = JSON.parse(localStorage.getItem(KEY) || '[]')
+    const stored = localStorage.getItem(KEY)
+    const userPosts = JSON.parse(stored || localStorage.getItem(LEGACY_KEY) || '[]').filter(
+      (post) => !post.isMock,
+    )
+    posts.value = [
+      ...communityMockData.posts.map((post) => ({ ...post, isMock: true })),
+      ...userPosts,
+    ]
+    if (!stored) localStorage.setItem(KEY, JSON.stringify(userPosts))
   } catch {
-    posts.value = []
+    posts.value = communityMockData.posts.map((post) => ({ ...post, isMock: true }))
   }
 }
 function save() {
-  localStorage.setItem(KEY, JSON.stringify(posts.value))
+  localStorage.setItem(KEY, JSON.stringify(posts.value.filter((post) => !post.isMock)))
   dispatchEvent(new Event('localhub-posts'))
 }
 const MOCK_TEMPLATES = {
@@ -43,14 +53,14 @@ export function useCommunityPosts() {
     },
     update(id, p, pw) {
       const x = posts.value.find((x) => x.id === id)
-      if (!x || x.password !== pw) return false
+      if (!x || x.isMock || x.password !== pw) return false
       Object.assign(x, p, { updatedAt: new Date().toISOString() })
       save()
       return true
     },
     remove(id, pw) {
       const x = posts.value.find((x) => x.id === id)
-      if (!x || x.password !== pw) return false
+      if (!x || x.isMock || x.password !== pw) return false
       posts.value = posts.value.filter((x) => x.id !== id)
       save()
       return true
@@ -59,7 +69,7 @@ export function useCommunityPosts() {
       const post = posts.value.find((item) => item.id === id)
       if (!post) return
       post.views = (post.views || 0) + 1
-      save()
+      if (!post.isMock) save()
     },
     toggleLike(id, visitorId) {
       const post = posts.value.find((item) => item.id === id)
@@ -68,7 +78,7 @@ export function useCommunityPosts() {
       const index = post.likedBy.indexOf(visitorId)
       if (index >= 0) post.likedBy.splice(index, 1)
       else post.likedBy.push(visitorId)
-      save()
+      if (!post.isMock) save()
       return index < 0
     },
     seedMockPosts(places) {

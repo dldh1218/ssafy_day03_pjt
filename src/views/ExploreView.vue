@@ -42,7 +42,6 @@ const {
   remove: removePost,
   incrementViews,
   toggleLike,
-  seedMockPosts,
 } = useCommunityPosts()
 const { comments, create: createComment, remove: removeComment } = useCommunityComments()
 
@@ -268,7 +267,6 @@ function deleteComment(comment) {
 
 onMounted(async () => {
   await load()
-  seedMockPosts(places.value)
   selected.value = route.query.placeId
     ? places.value.find((place) => place.id === route.query.placeId) || null
     : null
@@ -514,7 +512,7 @@ watch(
             <span>{{ isLiked(postDetail) ? '♥' : '♡' }}</span>
             좋아요 {{ postDetail.likedBy?.length || 0 }}
           </button>
-          <div>
+          <div v-if="!postDetail.isMock">
             <button type="button" @click="requestPostAction('edit', postDetail)">수정</button>
             <button type="button" @click="requestPostAction('delete', postDetail)">삭제</button>
           </div>
@@ -535,7 +533,7 @@ watch(
                 <b>{{ comment.author }}</b>
                 <p>{{ comment.content }}</p>
               </div>
-              <button type="button" @click="deleteComment(comment)">삭제</button>
+              <button v-if="!comment.isMock" type="button" @click="deleteComment(comment)">삭제</button>
             </div>
           </div>
           <p v-else class="muted">아직 댓글이 없습니다. 첫 댓글을 남겨보세요.</p>
