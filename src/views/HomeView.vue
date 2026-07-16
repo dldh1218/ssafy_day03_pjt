@@ -410,7 +410,6 @@ onBeforeUnmount(() => {
     </section>
     <section id="about" class="data-note">
       <b>서울 열린데이터를 더 가깝게.</b>
-      <p>한국관광공사 TourAPI 4.0과 서울 자치구 경계 데이터를 활용했습니다.</p>
     </section>
   </div>
 </template>
