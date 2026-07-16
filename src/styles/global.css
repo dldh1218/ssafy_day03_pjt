@@ -2601,6 +2601,31 @@ nav a.router-link-active {
   background: #83bbd7;
   border-color: #83bbd7;
 }
+:root[data-theme='dark'] .sidebar .primary {
+  color: #07141c;
+  background: #83bbd7;
+  border: 1px solid #9ccbe1;
+}
+:root[data-theme='dark'] .sidebar .primary:hover,
+:root[data-theme='dark'] .sidebar .primary:focus-visible {
+  background: #a0cee3;
+}
+:root[data-theme='dark'] .modal-actions .primary {
+  color: #07141c;
+  background: #83bbd7;
+  border: 1px solid #9ccbe1;
+}
+:root[data-theme='dark'] .modal-actions .primary:hover,
+:root[data-theme='dark'] .modal-actions .primary:focus-visible {
+  background: #a0cee3;
+}
+:root[data-theme='dark'] .modal-actions .primary:disabled {
+  color: #84969f;
+  background: #26373f;
+  border-color: #3c5059;
+  cursor: not-allowed;
+  opacity: 1;
+}
 :root[data-theme='dark'] .search,
 :root[data-theme='dark'] .map-empty {
   color: #e8eef1;
@@ -2692,6 +2717,44 @@ nav a.router-link-active {
 :root[data-theme='dark'] .upload-placeholder {
   color: #b9ced8;
   background: #132128;
+}
+:root[data-theme='dark'] .story-card {
+  color: #dce7eb;
+  background: #1b2a31;
+  border-color: #34474f;
+}
+:root[data-theme='dark'] .story-card:hover,
+:root[data-theme='dark'] .story-card:focus-visible {
+  background: #22343c;
+  border-color: #5f8292;
+  box-shadow: 0 12px 28px #02080c70;
+}
+:root[data-theme='dark'] .story-card-body > p,
+:root[data-theme='dark'] .story-card-meta {
+  color: #9dafb7;
+}
+:root[data-theme='dark'] .story-arrow {
+  color: #b9d9e8;
+  background: #294451;
+}
+:root[data-theme='dark'] .detail-comments {
+  border-top-color: #40535c;
+}
+:root[data-theme='dark'] .detail-comment-head h3 {
+  color: #dce7eb;
+}
+:root[data-theme='dark'] .detail-comments > .muted {
+  color: #91a5ae;
+}
+:root[data-theme='dark'] .detail-comment-form {
+  background: #132128;
+  border-color: #40535c;
+}
+:root[data-theme='dark'] .detail-comment-form input,
+:root[data-theme='dark'] .detail-comment-form textarea {
+  color: #dce7eb;
+  background: #18272e;
+  border-color: #3d515a;
 }
 :root[data-theme='dark'] .district-shape path {
   fill: #263941;
