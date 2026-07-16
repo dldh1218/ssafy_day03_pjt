@@ -1,6 +1,8 @@
 <script setup>
 import AppHeader from './components/common/AppHeader.vue'
 import ChatbotFloatingButton from './components/chatbot/ChatbotFloatingButton.vue'
+import { useI18n } from 'vue-i18n'
+const { t } = useI18n()
 </script>
 <template>
   <AppHeader />
@@ -9,13 +11,13 @@ import ChatbotFloatingButton from './components/chatbot/ChatbotFloatingButton.vu
     <div class="footer-inner">
       <div>
         <a class="footer-brand" href="/">LocalHub</a>
-        <p>서울의 장소와 사람들의 이야기를 연결합니다.</p>
+        <p>{{ t('footer.description') }}</p>
       </div>
       <div class="footer-meta">
-        <nav aria-label="푸터 메뉴">
-          <a href="/#districts">서울 탐색</a>
-          <a href="/#community">커뮤니티</a>
-          <a href="/#about">데이터 안내</a>
+        <nav :aria-label="t('nav.data')">
+          <a href="/#districts">{{ t('nav.explore') }}</a>
+          <a href="/#community">{{ t('nav.community') }}</a>
+          <a href="/#about">{{ t('nav.data') }}</a>
         </nav>
         <small>© 2026 LocalHub · SEOUL LOCAL ARCHIVE</small>
       </div>

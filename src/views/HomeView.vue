@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, nextTick, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { categories } from '../data/categories.js'
 import { useSeoulPlaces } from '../composables/useSeoulPlaces.js'
 import { useCommunityPosts } from '../composables/useCommunityPosts.js'
@@ -12,6 +13,10 @@ const router = useRouter(),
   { places, load } = useSeoulPlaces(),
   { latest, posts } = useCommunityPosts(),
   { comments } = useCommunityComments()
+const { t, locale } = useI18n()
+const districtEnglish = { 강남구: 'Gangnam-gu', 강동구: 'Gangdong-gu', 강북구: 'Gangbuk-gu', 강서구: 'Gangseo-gu', 관악구: 'Gwanak-gu', 광진구: 'Gwangjin-gu', 구로구: 'Guro-gu', 금천구: 'Geumcheon-gu', 노원구: 'Nowon-gu', 도봉구: 'Dobong-gu', 동대문구: 'Dongdaemun-gu', 동작구: 'Dongjak-gu', 마포구: 'Mapo-gu', 서대문구: 'Seodaemun-gu', 서초구: 'Seocho-gu', 성동구: 'Seongdong-gu', 성북구: 'Seongbuk-gu', 송파구: 'Songpa-gu', 양천구: 'Yangcheon-gu', 영등포구: 'Yeongdeungpo-gu', 용산구: 'Yongsan-gu', 은평구: 'Eunpyeong-gu', 종로구: 'Jongno-gu', 중구: 'Jung-gu', 중랑구: 'Jungnang-gu' }
+const localDistrict = (value) => (locale.value === 'en' ? districtEnglish[value] || value : value)
+const localCategory = (value) => t(`categories.${value}`, value)
 const PAGE_SIZE = 6
 const shown = ref(PAGE_SIZE)
 const loadSentinel = ref(null)
@@ -204,17 +209,15 @@ onBeforeUnmount(() => {
       </div>
       <div class="hero-copy" :style="heroCopyStyle">
         <p class="eyebrow">LOCALHUB · SEOUL TRAVEL GUIDE</p>
-        <h1><span>SEOUL</span><em>오늘, 서울을 발견하는 방법</em></h1>
-        <p>
-          관광지부터 공연, 쇼핑, 레포츠, 숙소까지. 지금 내 취향에 맞는 서울을 한곳에서 발견하세요.
-        </p>
+        <h1><span>SEOUL</span><em>{{ t('hero.title') }}</em></h1>
+        <p>{{ t('hero.description') }}</p>
         <form class="hero-search" role="search" @submit.prevent="searchPlaces">
           <span aria-hidden="true">⌕</span>
           <input
             v-model="searchQuery"
             type="search"
-            placeholder="지역, 장소, 하고 싶은 일을 검색해보세요"
-            aria-label="서울 장소 통합 검색"
+            :placeholder="t('hero.placeholder')"
+            :aria-label="t('hero.searchLabel')"
             autocomplete="off"
             aria-autocomplete="list"
             :aria-expanded="suggestionsOpen"
@@ -223,9 +226,9 @@ onBeforeUnmount(() => {
             @keydown.esc="suggestionsOpen = false"
             @blur="closeSuggestions"
           />
-          <button type="submit">검색</button>
+          <button type="submit">{{ t('hero.search') }}</button>
           <div v-if="suggestionsOpen" class="search-suggestions" role="listbox">
-            <p>{{ searchQuery.trim() ? '검색 제안' : '지금 주목받는 서울' }}</p>
+            <p>{{ searchQuery.trim() ? t('hero.suggestion') : t('hero.trending') }}</p>
             <button
               v-for="place in searchSuggestions"
               :key="place.id"
@@ -238,23 +241,23 @@ onBeforeUnmount(() => {
                 categories.find((item) => item.name === place.category)?.icon || '●'
               }}</span>
               <b>{{ place.title }}</b>
-              <small>{{ place.district }} · {{ place.category }}</small>
+              <small>{{ localDistrict(place.district) }} · {{ localCategory(place.category) }}</small>
               <i aria-hidden="true">↗</i>
             </button>
             <div v-if="!searchSuggestions.length" class="suggestion-empty">
-              일치하는 장소가 없습니다.
+              {{ t('hero.empty') }}
             </div>
           </div>
         </form>
         <div class="hero-actions">
-          <a class="primary" href="#districts">서울 탐색 시작하기 <span>↘</span></a>
+          <a class="primary" href="#districts">{{ t('hero.start') }} <span>↘</span></a>
           <span class="hero-index"><b>7</b> WAYS TO ENJOY</span>
         </div>
       </div>
       <div class="hero-rail" aria-hidden="true"><span>SCROLL TO EXPLORE</span><b>↘</b></div>
       <div class="hero-caption">
         <span>LIVE CURATION</span>
-        <p>서울에서 보내는 오늘을 더 다채롭게</p>
+        <p>{{ t('hero.caption') }}</p>
       </div>
     </section>
     <CommunityRanking
@@ -266,12 +269,12 @@ onBeforeUnmount(() => {
       <div class="section-head">
         <div>
           <p class="eyebrow">DISTRICT EXPLORER</p>
-          <h2>궁금한 자치구를 선택해보세요</h2>
+          <h2>{{ t('home.districtTitle') }}</h2>
         </div>
-        <p>지도 위 자치구를 누르면 그 지역의 장소와 이야기를 만날 수 있어요.</p>
+        <p>{{ t('home.districtDescription') }}</p>
       </div>
       <div class="map-wrap map-only">
-        <svg viewBox="-8 -4 282 230" aria-label="서울 자치구 지도">
+        <svg viewBox="-8 -4 282 230" :aria-label="t('home.districtMap')">
           <g
             v-for="f in features"
             :key="name(f)"
@@ -298,7 +301,7 @@ onBeforeUnmount(() => {
             :x="center(f).x"
             :y="center(f).y"
           >
-            {{ name(f) }}
+            {{ localDistrict(name(f)) }}
           </text>
         </svg>
       </div>
@@ -307,7 +310,7 @@ onBeforeUnmount(() => {
       <div class="section-head">
         <div>
           <p class="eyebrow">EXPLORE BY CATEGORY</p>
-          <h2>취향에 맞는 서울을 골라보세요</h2>
+          <h2>{{ t('home.categoryTitle') }}</h2>
         </div>
       </div>
       <div class="category-showcase">
@@ -329,14 +332,14 @@ onBeforeUnmount(() => {
               <span v-else>{{ c.icon }}</span>
             </div>
             <div class="category-copy">
-              <small>{{ count(c.name).toLocaleString() }} PLACES</small>
-              <h3>{{ c.name }}</h3>
-              <p>{{ c.name }}로 만나는 새로운 서울의 표정</p>
-              <b>둘러보기 →</b>
+              <small>{{ count(c.name).toLocaleString() }} {{ t('home.places') }}</small>
+              <h3>{{ localCategory(c.name) }}</h3>
+              <p>{{ t('home.categoryCopy', { category: localCategory(c.name) }) }}</p>
+              <b>{{ t('home.view') }} →</b>
             </div>
           </button>
         </div>
-        <aside class="place-reels" aria-label="서울 장소 사진 모음">
+        <aside class="place-reels" :aria-label="t('home.photos')">
           <div class="photo-reel reel-up">
             <div class="reel-track">
               <article
@@ -376,9 +379,9 @@ onBeforeUnmount(() => {
       <div class="section-head">
         <div>
           <p class="eyebrow">COMMUNITY</p>
-          <h2>서울人의 최신 이야기</h2>
+          <h2>{{ t('home.communityTitle') }}</h2>
         </div>
-        <p>LocalHub 이용자들이 장소에서 남긴 최신 후기를 확인해보세요.</p>
+        <p>{{ t('home.communityDescription') }}</p>
       </div>
       <div v-if="visible.length" class="post-grid">
         <article
@@ -386,10 +389,10 @@ onBeforeUnmount(() => {
           :key="p.id"
           @click="router.push(`/explore/${p.district}?placeId=${p.placeId}`)"
         >
-          <small>{{ p.category }} · {{ p.district }}</small>
+          <small>{{ localCategory(p.category) }} · {{ localDistrict(p.district) }}</small>
           <h3>{{ p.title }}</h3>
           <p>{{ p.content.slice(0, 90) }}</p>
-          <span>{{ p.placeName }} · 조회 {{ p.views }}</span>
+          <span>{{ p.placeName }} · {{ t('home.views') }} {{ p.views }}</span>
         </article>
         <template v-if="isLoadingStories">
           <article
@@ -403,13 +406,13 @@ onBeforeUnmount(() => {
         </template>
       </div>
       <div v-else class="empty">
-        <b>아직 등록된 이야기가 없습니다.</b>
-        <p>서울의 장소를 둘러보고 첫 번째 후기를 남겨보세요.</p>
+        <b>{{ t('home.noStories') }}</b>
+        <p>{{ t('home.firstStory') }}</p>
       </div>
       <div v-if="hasMoreStories" ref="loadSentinel" class="story-sentinel" aria-hidden="true"></div>
     </section>
     <section id="about" class="data-note">
-      <b>서울 열린데이터를 더 가깝게.</b>
+      <b>{{ t('home.dataNote') }}</b>
     </section>
   </div>
 </template>

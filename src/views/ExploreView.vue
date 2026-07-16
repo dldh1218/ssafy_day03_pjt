@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet.markercluster/dist/MarkerCluster.css'
@@ -15,6 +16,10 @@ const categoryIcon = Object.fromEntries(categories.map((item) => [item.name, ite
 const SEOUL_CENTER = [37.5665, 126.978]
 const SEOUL_BOUNDS = L.latLngBounds([37.4, 126.75], [37.72, 127.2])
 const route = useRoute()
+const { t, locale } = useI18n()
+const districtEnglish = { 서울전체: 'All Seoul', 강남구: 'Gangnam-gu', 강동구: 'Gangdong-gu', 강북구: 'Gangbuk-gu', 강서구: 'Gangseo-gu', 관악구: 'Gwanak-gu', 광진구: 'Gwangjin-gu', 구로구: 'Guro-gu', 금천구: 'Geumcheon-gu', 노원구: 'Nowon-gu', 도봉구: 'Dobong-gu', 동대문구: 'Dongdaemun-gu', 동작구: 'Dongjak-gu', 마포구: 'Mapo-gu', 서대문구: 'Seodaemun-gu', 서초구: 'Seocho-gu', 성동구: 'Seongdong-gu', 성북구: 'Seongbuk-gu', 송파구: 'Songpa-gu', 양천구: 'Yangcheon-gu', 영등포구: 'Yeongdeungpo-gu', 용산구: 'Yongsan-gu', 은평구: 'Eunpyeong-gu', 종로구: 'Jongno-gu', 중구: 'Jung-gu', 중랑구: 'Jungnang-gu' }
+const localDistrict = (value) => (locale.value === 'en' ? districtEnglish[value] || value : value)
+const localCategory = (value) => (value === '전체' ? t('explore.all') : t(`categories.${value}`, value))
 const district = computed(() => decodeURIComponent(route.params.district))
 const category = ref(route.query.category || '전체')
 const search = ref(route.query.q || '')
@@ -329,8 +334,8 @@ watch(
   <div class="explore">
     <section class="explore-top">
       <p class="eyebrow">SEOUL DISTRICT GUIDE</p>
-      <h1>{{ district }}</h1>
-      <p>지역의 장소를 지도에서 고르고 자세한 정보와 이야기를 확인해보세요.</p>
+      <h1>{{ localDistrict(district) }}</h1>
+      <p>{{ t('explore.description') }}</p>
       <div class="filters">
         <button
           v-for="item in ['전체', ...categories.map((entry) => entry.name)]"
@@ -339,21 +344,21 @@ watch(
           :class="{ active: category === item }"
           @click="category = item"
         >
-          {{ item }}
+          {{ localCategory(item) }}
         </button>
       </div>
       <input
         v-model="search"
         class="search"
         type="search"
-        placeholder="장소 이름 검색"
-        aria-label="장소 검색"
+        :placeholder="t('explore.placeholder')"
+        :aria-label="t('explore.search')"
       />
     </section>
     <div class="explore-layout" :class="{ 'has-sidebar': selected }">
-      <section class="place-map" aria-label="장소 지도">
+      <section class="place-map" :aria-label="t('explore.map')">
         <div ref="mapEl" class="leaflet-map"></div>
-        <div v-if="!filteredPlaces.length" class="map-empty">조건에 맞는 장소가 없습니다.</div>
+        <div v-if="!filteredPlaces.length" class="map-empty">{{ t('explore.empty') }}</div>
       </section>
       <aside v-if="selected" class="sidebar">
         <button class="close" type="button" aria-label="상세 닫기" @click="selected = null">

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <title>LocalHub WBS + 간트차트</title>
+  <style>
+    @page { size: A4 landscape; margin: 6mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Malgun Gothic", sans-serif; color: #17233a; font-size: 7.3pt; }
+    h1 { margin: 0 0 1.5mm; color: #17365f; font-size: 16pt; letter-spacing: -.6px; }
+    .note { margin-bottom: 2mm; padding: 2mm 3mm; background: #f1f5f8; border-left: 4px solid #3d9277; line-height: 1.35; color: #4c5b6f; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    th { padding: 1.4mm 1mm; color: white; background: #17365f; border: 1px solid #fff; text-align: center; line-height: 1.15; }
+    td { height: 6.2mm; padding: .8mm 1.1mm; border: 1px solid #cfd8e2; vertical-align: middle; }
+    td.center { text-align: center; }
+    tr:nth-child(even) td { background: #f9fafb; }
+    .category { color: white; font-weight: bold; text-align: center; }
+    .plan { background: #d86b4b !important; }
+    .design { background: #ce9d34 !important; }
+    .dev { background: #3d9277 !important; }
+    .deploy { background: #437aa0 !important; }
+    .test { background: #6e63a0 !important; }
+    .docs { background: #7b8795 !important; }
+    .present { background: #b24b67 !important; }
+    .status { display: inline-block; border-radius: 20px; padding: .7mm 2mm; background: #e5f3e9; color: #236a3b; font-weight: bold; }
+    .day { padding: 1.2mm; background: #f5f7fa; }
+    .bar { height: 4.5mm; border-radius: 3mm; background: linear-gradient(90deg,#3d9277,#4d83a5); box-shadow: inset 0 0 0 1px rgba(0,0,0,.04); }
+    .legend-title { margin: 2mm 0 1mm; font-weight: bold; color: #17365f; }
+    .legend { display: flex; gap: 2mm; flex-wrap: wrap; align-items: center; }
+    .legend span { min-width: 22mm; padding: 1mm 2mm; border-radius: 2mm; color: white; font-weight: bold; text-align: center; }
+    .legend .period { background: linear-gradient(90deg,#3d9277,#4d83a5); }
+    footer { margin-top: 1.5mm; display: flex; justify-content: space-between; color: #8792a1; font-size: 6.8pt; }
+  </style>
+</head>
+<body>
+  <h1>LocalHub WBS + 간트차트 <small>(Day 1~Day 3 기준)</small></h1>
+  <div class="note"><b>WBS(작업분해구조)</b>: 작업을 잘게 쪼갠 목록 / <b>간트차트</b>: 일정을 막대로 표시하는 표<br>
+    실습 편의상 전체 일정을 Day 1~Day 3으로 단순화했습니다. 기획·설계는 Day 1, 개발은 Day 2, 배포·테스트·문서화·발표 준비는 Day 3에 수행합니다. 실제 프로젝트에서는 각 단계를 여러 날로 세분화하고 실제 날짜(YYYY-MM-DD)로 환산합니다.</div>
+
+  <table>
+    <colgroup>
+      <col style="width:4%"><col style="width:8%"><col style="width:23%"><col style="width:8%">
+      <col style="width:6%"><col style="width:6%"><col style="width:5%"><col style="width:7%"><col style="width:7%">
+      <col style="width:8.66%"><col style="width:8.66%"><col style="width:8.66%">
+    </colgroup>
+    <thead><tr><th>No</th><th>대분류</th><th>작업명</th><th>담당</th><th>시작<br>(Day)</th><th>종료<br>(Day)</th><th>소요일</th><th>진행률<br>(%)</th><th>상태</th><th>Day 1</th><th>Day 2</th><th>Day 3</th></tr></thead>
+    <tbody>
+      <tr><td class="center">1</td><td class="category plan">기획</td><td>프로젝트 목표 및 핵심 범위 정의</td><td class="center">PM</td><td class="center">1</td><td class="center">1</td><td class="center">1일</td><td class="center">100</td><td class="center"><span class="status">완료</span></td><td class="day"><div class="bar"></div></td><td></td><td></td></tr>
+      <tr><td class="center">2</td><td class="category plan">기획</td><td>사용자 요구사항 및 주요 기능 정리</td><td class="center">PM</td><td class="center">1</td><td class="center">1</td><td class="center">1일</td><td class="center">100</td><td class="center"><span class="status">완료</span></td><td class="day"><div class="bar"></div></td><td></td><td></td></tr>
+      <tr><td class="center">3</td><td class="category design">설계</td><td>홈·지역 탐색 화면 및 사용자 흐름 설계</td><td class="center">기획/FE</td><td class="center">1</td><td class="center">1</td><td class="center">1일</td><td class="center">100</td><td class="center"><span class="status">완료</span></td><td class="day"><div class="bar"></div></td><td></td><td></td></tr>
+      <tr><td class="center">4</td><td class="category design">설계</td><td>장소 데이터 구조 및 컴포넌트 설계</td><td class="center">FE/데이터</td><td class="center">1</td><td class="center">1</td><td class="center">1일</td><td class="center">100</td><td class="center"><span class="status">완료</span></td><td class="day"><div class="bar"></div></td><td></td><td></td></tr>
+      <tr><td class="center">5</td><td class="category dev">개발</td><td>서울 관광 데이터 로딩 및 정규화</td><td class="center">데이터</td><td class="center">2</td><td class="center">2</td><td class="center">1일</td><td class="center">100</td><td class="center"><span class="status">완료</span></td><td></td><td class="day"><div class="bar"></div></td><td></td></tr>
+      <tr><td class="center">6</td><td class="category dev">개발</td><td>홈 검색·카테고리·자치구 지도 구현</td><td class="center">FE</td><td class="center">2</td><td class="center">2</td><td class="center">1일</td><td class="center">100</td><td class="center"><span class="status">완료</span></td><td></td><td class="day"><div class="bar"></div></td><td></td></tr>
+      <tr><td class="center">7</td><td class="category dev">개발</td><td>장소 필터·목록·Leaflet 지도 구현</td><td class="center">FE</td><td class="center">2</td><td class="center">2</td><td class="center">1일</td><td class="center">100</td><td class="center"><span class="status">완료</span></td><td></td><td class="day"><div class="bar"></div></td><td></td></tr>
+      <tr><td class="center">8</td><td class="category dev">개발</td><td>게시글·댓글·좋아요 커뮤니티 구현</td><td class="center">FE</td><td class="center">2</td><td class="center">2</td><td class="center">1일</td><td class="center">100</td><td class="center"><span class="status">완료</span></td><td></td><td class="day"><div class="bar"></div></td><td></td></tr>
+      <tr><td class="center">9</td><td class="category dev">개발</td><td>AI 서울 여행 도우미 연동</td><td class="center">FE/AI</td><td class="center">2</td><td class="center">2</td><td class="center">1일</td><td class="center">100</td><td class="center"><span class="status">완료</span></td><td></td><td class="day"><div class="bar"></div></td><td></td></tr>
+      <tr><td class="center">10</td><td class="category deploy">배포</td><td>환경설정 확인 및 production build</td><td class="center">FE</td><td class="center">3</td><td class="center">3</td><td class="center">1일</td><td class="center">100</td><td class="center"><span class="status">완료</span></td><td></td><td></td><td class="day"><div class="bar"></div></td></tr>
+      <tr><td class="center">11</td><td class="category test">테스트</td><td>기능·반응형·오류 시나리오 테스트</td><td class="center">QA</td><td class="center">3</td><td class="center">3</td><td class="center">1일</td><td class="center">100</td><td class="center"><span class="status">완료</span></td><td></td><td></td><td class="day"><div class="bar"></div></td></tr>
+      <tr><td class="center">12</td><td class="category test">테스트</td><td>결함 수정 및 최종 회귀 테스트</td><td class="center">FE/QA</td><td class="center">3</td><td class="center">3</td><td class="center">1일</td><td class="center">100</td><td class="center"><span class="status">완료</span></td><td></td><td></td><td class="day"><div class="bar"></div></td></tr>
+      <tr><td class="center">13</td><td class="category docs">문서화</td><td>기능명세서·WBS·README 정리</td><td class="center">PM/FE</td><td class="center">3</td><td class="center">3</td><td class="center">1일</td><td class="center">100</td><td class="center"><span class="status">완료</span></td><td></td><td></td><td class="day"><div class="bar"></div></td></tr>
+      <tr><td class="center">14</td><td class="category present">발표준비</td><td>시연 시나리오 및 발표 자료 준비</td><td class="center">전체</td><td class="center">3</td><td class="center">3</td><td class="center">1일</td><td class="center">100</td><td class="center"><span class="status">완료</span></td><td></td><td></td><td class="day"><div class="bar"></div></td></tr>
+    </tbody>
+  </table>
+
+  <div class="legend-title">대분류 (범례)</div>
+  <div class="legend"><span class="plan">기획</span><span class="design">설계</span><span class="dev">개발</span><span class="deploy">배포</span><span class="test">테스트</span><span class="docs">문서화</span><span class="present">발표준비</span><span class="period">진행기간</span></div>
+  <footer><span>LocalHub · WBS v2.0</span><span>작성 기준: Day 1~Day 3 실습 일정</span></footer>
+</body>
+</html>

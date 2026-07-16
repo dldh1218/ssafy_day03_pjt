@@ -26,7 +26,8 @@ body {
   color: var(--ink);
   background: #fff;
   font-family: 'DM Sans', 'Noto Sans KR', sans-serif;
-  letter-spacing: -0.025em;
+  letter-spacing: 0;
+  transition: background-color 180ms ease, color 180ms ease;
 }
 button,
 input,
@@ -109,6 +110,53 @@ nav {
   gap: 34px;
   font-size: 13px;
   font-weight: 600;
+}
+.site-header > nav {
+  margin-left: auto;
+}
+.header-controls {
+  margin-left: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.locale-switch {
+  padding: 3px;
+  display: flex;
+  background: #edf1f3;
+  border: 1px solid #d7dce0;
+  border-radius: 6px;
+}
+.locale-switch button,
+.theme-toggle {
+  border: 0;
+  cursor: pointer;
+}
+.locale-switch button {
+  min-width: 34px;
+  height: 28px;
+  padding: 0 7px;
+  color: #66747c;
+  background: transparent;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+}
+.locale-switch button.active {
+  color: var(--ink);
+  background: var(--paper);
+  box-shadow: 0 1px 4px #1721261c;
+}
+.theme-toggle {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  font-size: 19px;
 }
 nav a:hover,
 nav a.router-link-active {
@@ -2119,6 +2167,7 @@ nav a.router-link-active {
   }
   .menu {
     display: block;
+    margin-left: auto;
   }
   nav {
     position: absolute;
@@ -2132,6 +2181,15 @@ nav a.router-link-active {
   }
   nav.open {
     display: flex;
+  }
+  .site-header > nav {
+    margin-left: 0;
+  }
+  .header-controls {
+    margin-left: 10px;
+  }
+  .locale-switch button {
+    min-width: 30px;
   }
   .home > .hero {
     width: 100%;
@@ -2403,5 +2461,264 @@ nav a.router-link-active {
   }
   .detail-comment-form button {
     grid-column: 1 / -1;
+  }
+}
+
+/* Theme overrides stay together so existing component styling remains easy to maintain. */
+:root[data-theme='dark'] {
+  --ink: #e8eef1;
+  --paper: #17232a;
+  --cream: #111a20;
+  --sage: #1b2a30;
+  --line: #34464e;
+  --blue: #68a7cb;
+  --orange: #68a7cb;
+}
+:root[data-theme='dark'] body {
+  background: #111a20;
+}
+:root[data-theme='dark'] .site-header {
+  background: #111a20e8;
+  border-bottom-color: #ffffff1f;
+}
+:root[data-theme='dark'] .brand-copy small,
+:root[data-theme='dark'] .section-head > p,
+:root[data-theme='dark'] .sidebar p,
+:root[data-theme='dark'] .footer-inner p {
+  color: #aebdc4;
+}
+:root[data-theme='dark'] .home > .hero {
+  background:
+    linear-gradient(#04132142, #03101c73),
+    url('/images/seoul-night-hero.png') center/cover no-repeat;
+}
+:root[data-theme='dark'] .hero-search {
+  color: #d9e5eb;
+  background: #111d24d9;
+  border-color: #9ab7c6a6;
+  box-shadow: 0 20px 55px #020b11a6;
+}
+:root[data-theme='dark'] .hero-search input {
+  color: #f2f6f8;
+  background: transparent;
+  border: 0;
+}
+:root[data-theme='dark'] .hero-search input::placeholder {
+  color: #a6b5bc;
+  opacity: 1;
+}
+:root[data-theme='dark'] .hero-search > button {
+  color: #07141c;
+  background: #83bbd7;
+}
+:root[data-theme='dark'] .locale-switch {
+  background: #0c1419;
+  border-color: #34464e;
+}
+:root[data-theme='dark'] .locale-switch button {
+  color: #9fb0b8;
+}
+:root[data-theme='dark'] .locale-switch button.active,
+:root[data-theme='dark'] .theme-toggle {
+  color: #f4f7f8;
+  background: #26363e;
+}
+:root[data-theme='dark'] .category-card,
+:root[data-theme='dark'] .post-grid article,
+:root[data-theme='dark'] .polaroid-card,
+:root[data-theme='dark'] .sidebar,
+:root[data-theme='dark'] .story-modal,
+:root[data-theme='dark'] .post-detail-modal,
+:root[data-theme='dark'] .chat-panel,
+:root[data-theme='dark'] .welcome,
+:root[data-theme='dark'] .suggest,
+:root[data-theme='dark'] .chat-composer-wrap,
+:root[data-theme='dark'] .chat-panel .chat-header {
+  color: var(--ink);
+  background: #17232a;
+  border-color: #34464e;
+}
+:root[data-theme='dark'] .community-ranking {
+  color: var(--ink);
+  background: #111a20;
+}
+:root[data-theme='dark'] .home > #districts {
+  color: var(--ink);
+  background: #111a20;
+}
+:root[data-theme='dark'] .home > #categories,
+:root[data-theme='dark'] .home > #community,
+:root[data-theme='dark'] .explore-top {
+  color: var(--ink);
+  background: #111a20;
+}
+:root[data-theme='dark'] .community-ranking .section-head h2 {
+  color: #edf3f5;
+}
+:root[data-theme='dark'] .community-ranking .section-head > p {
+  color: #9fb0b8;
+}
+:root[data-theme='dark'] .ranking-line {
+  opacity: 0.75;
+  filter: saturate(0.6) brightness(0.85);
+}
+:root[data-theme='dark'] .polaroid-card {
+  background: #1a282f;
+  border-color: #43535a;
+  box-shadow: 0 18px 34px #02080c70;
+}
+:root[data-theme='dark'] .polaroid-card:hover,
+:root[data-theme='dark'] .polaroid-card:focus-visible {
+  box-shadow: 0 26px 48px #02080ca8;
+}
+:root[data-theme='dark'] .polaroid-placeholder {
+  color: #e8f1f5;
+  background: #416f86;
+}
+:root[data-theme='dark'] .polaroid-info small {
+  color: #a9b7bd;
+}
+:root[data-theme='dark'] .polaroid-info em {
+  color: #83bbd7;
+}
+:root[data-theme='dark'] .category-copy,
+:root[data-theme='dark'] .messages,
+:root[data-theme='dark'] .detail-comments,
+:root[data-theme='dark'] .detail-comment-form {
+  background: #111c22;
+}
+:root[data-theme='dark'] .empty {
+  background: #17252c;
+  border-color: #53666f;
+}
+:root[data-theme='dark'] .filters button {
+  color: #cbd8dd;
+  background: #1b2a31;
+  border-color: #40525a;
+}
+:root[data-theme='dark'] .filters button.active {
+  color: #07141c;
+  background: #83bbd7;
+  border-color: #83bbd7;
+}
+:root[data-theme='dark'] .search,
+:root[data-theme='dark'] .map-empty {
+  color: #e8eef1;
+  background: #1b2a31;
+  border-color: #40525a;
+}
+:root[data-theme='dark'] .explore-layout,
+:root[data-theme='dark'] .place-map {
+  background: #17262d;
+  border-color: #34464e;
+  box-shadow: 0 26px 65px #02080c70;
+}
+:root[data-theme='dark'] .search-suggestions,
+:root[data-theme='dark'] .chat-message-row > p {
+  color: #dbe5e9;
+  background: #1d2c33;
+  border-color: #3a4c54;
+}
+:root[data-theme='dark'] .search-suggestions > button {
+  color: #dbe5e9;
+  background: transparent;
+}
+:root[data-theme='dark'] .search-suggestions > button:hover,
+:root[data-theme='dark'] .search-suggestions > button:focus-visible {
+  background: #293b43;
+}
+:root[data-theme='dark'] .search-suggestions small,
+:root[data-theme='dark'] .search-suggestions > p {
+  color: #9fb0b8;
+}
+:root[data-theme='dark'] input,
+:root[data-theme='dark'] textarea,
+:root[data-theme='dark'] select {
+  color: #e8eef1;
+  background-color: #18252c;
+  border-color: #3a4c54;
+}
+:root[data-theme='dark'] .chat-panel .chat-composer {
+  background: #0f1a20;
+  border-color: #3a4c54;
+}
+:root[data-theme='dark'] .chat-panel .chat-composer input {
+  color: #e8eef1;
+  background: transparent;
+  border: 0;
+}
+:root[data-theme='dark'] .chat-panel .chat-composer input::placeholder {
+  color: #82949d;
+}
+:root[data-theme='dark'] .suggest button {
+  color: #c7d7de;
+  background: #22343c;
+  border-color: #40545d;
+}
+:root[data-theme='dark'] .suggest button:hover {
+  color: #07141c;
+  background: #83bbd7;
+  border-color: #83bbd7;
+}
+:root[data-theme='dark'] .chat-close {
+  color: #dce7eb;
+  background: #263941;
+}
+:root[data-theme='dark'] .modal,
+:root[data-theme='dark'] .modal-close,
+:root[data-theme='dark'] .modal-cancel,
+:root[data-theme='dark'] .post-detail-modal .modal-close,
+:root[data-theme='dark'] .post-detail-actions button {
+  color: #dbe5e9;
+  background: #1b2a31;
+  border-color: #40525a;
+}
+:root[data-theme='dark'] .modal-head small,
+:root[data-theme='dark'] .modal-head > p:last-child,
+:root[data-theme='dark'] .post-detail-content,
+:root[data-theme='dark'] .detail-comments .comment-item p,
+:root[data-theme='dark'] .auth-modal > p:not(.eyebrow):not(.form-error) {
+  color: #aebdc4;
+}
+:root[data-theme='dark'] .auth-modal h2,
+:root[data-theme='dark'] .post-detail-head h2 {
+  color: #edf3f5;
+}
+:root[data-theme='dark'] .post-detail-head {
+  background: #17262d;
+  border-color: #34464e;
+}
+:root[data-theme='dark'] .detail-comments .comment-list,
+:root[data-theme='dark'] .upload-placeholder {
+  color: #b9ced8;
+  background: #132128;
+}
+:root[data-theme='dark'] .district-shape path {
+  fill: #263941;
+  stroke: #87a6b4;
+}
+:root[data-theme='dark'] .district-label {
+  fill: #b8cbd4;
+  stroke: #18272e;
+  stroke-width: 1.05px;
+  font-weight: 700;
+}
+:root[data-theme='dark'] .district-label.active {
+  fill: #f4f8fa;
+  stroke: #315f76;
+  stroke-width: 1.2px;
+}
+:root[data-theme='dark'] .leaflet-layer,
+:root[data-theme='dark'] .leaflet-control-zoom-in,
+:root[data-theme='dark'] .leaflet-control-zoom-out,
+:root[data-theme='dark'] .leaflet-control-attribution {
+  filter: brightness(0.72) contrast(1.15) saturate(0.75);
+}
+:root[data-theme='dark'] .site-footer {
+  background: #091116;
+}
+@media (max-width: 800px) {
+  :root[data-theme='dark'] .site-header > nav {
+    background: #111a20;
   }
 }
