@@ -3,6 +3,7 @@ import { categories, districts } from '../data/categories.js'
 import { useSeoulPlaces } from './useSeoulPlaces.js'
 
 const HISTORY_KEY = 'localhub_chat_history_v1'
+const DEFAULT_GREETING = { role: 'bot', text: '안녕하세요 무엇을 도와드릴까요??' }
 const CONTEXT_LIMIT = 25
 const HISTORY_TURNS = 10
 const CATEGORY_KEYWORDS = {
@@ -99,7 +100,8 @@ async function callOpenAI(messages) {
   return data.choices?.[0]?.message?.content?.trim() || '답변을 받지 못했습니다.'
 }
 
-const messages = ref(JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'))
+const _stored = JSON.parse(localStorage.getItem(HISTORY_KEY) || 'null')
+const messages = ref((_stored && _stored.length ? _stored : [DEFAULT_GREETING]))
 const pending = ref(false)
 const { places, load } = useSeoulPlaces()
 function persist() {
